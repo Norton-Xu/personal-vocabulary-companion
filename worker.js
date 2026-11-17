@@ -14,13 +14,13 @@ function corsHeaders(request) {
   };
 }
 
-function jsonResponse(request, body, status = 200, cacheControl = "no-store") {
+function jsonResponse(request, body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       ...corsHeaders(request),
       "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": cacheControl,
+      "Cache-Control": "no-store",
     },
   });
 }
@@ -80,7 +80,16 @@ export default {
     const cache = caches.default;
     const cacheKey = new Request(`${url.origin}/cache/v2/${encodeURIComponent(word)}`);
     const cached = await cache.match(cacheKey);
-    if (cached) return new Response(cached.body, { status: 200, headers: { ...Object.fromEntries(cached.headers), ...corsHeaders(request) } });
+    if (cached) {
+      return new Response(cached.body, {
+        status: 200,
+        headers: {
+          ...Object.fromEntries(cached.headers),
+          ...corsHeaders(request),
+          "Cache-Control": "no-store",
+        },
+      });
+    }
 
     const endpoint = `https://www.dictionaryapi.com/api/v3/references/learners/json/${encodeURIComponent(word)}?key=${encodeURIComponent(env.MW_LEARNERS_API_KEY)}`;
     try {
@@ -91,9 +100,14 @@ export default {
       const result = normalizeEntry(entry);
       if (!result) return jsonResponse(request, { error: "No learner dictionary entry was found for that word." }, 404);
 
-      const response = jsonResponse(request, result, 200, `public, max-age=${CACHE_SECONDS}`);
-      ctx.waitUntil(cache.put(cacheKey, response.clone()));
-      return response;
+      const cacheResponse = new Response(JSON.stringify(result), {
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          "Cache-Control": `public, max-age=${CACHE_SECONDS}`,
+        },
+      });
+      ctx.waitUntil(cache.put(cacheKey, cacheResponse));
+      return jsonResponse(request, result);
     } catch {
       return jsonResponse(request, { error: "Could not reach the dictionary service." }, 502);
     }
