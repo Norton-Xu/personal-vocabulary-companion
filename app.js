@@ -139,7 +139,7 @@
     status.textContent = "Looking up word...";
     status.className = "status";
     try {
-      const response = await fetch(`${API_BASE_URL}/lookup?version=2&word=${encodeURIComponent(word)}`);
+      const response = await fetch(`${API_BASE_URL}/v3/lookup?word=${encodeURIComponent(word)}`);
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "The word could not be found.");
       state.draft = data;

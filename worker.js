@@ -71,25 +71,18 @@ export default {
   async fetch(request, env, ctx) {
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(request) });
     const url = new URL(request.url);
-    if (request.method !== "GET" || url.pathname !== "/lookup") return jsonResponse(request, { error: "Not found" }, 404);
+    if (request.method !== "GET" || !["/lookup", "/v3/lookup"].includes(url.pathname)) {
+      return jsonResponse(request, { error: "Not found" }, 404);
+    }
 
     const word = (url.searchParams.get("word") || "").trim().toLowerCase();
     if (!/^[a-z][a-z -]{0,79}$/i.test(word)) return jsonResponse(request, { error: "Enter one English word or phrase." }, 400);
     if (!env.MW_LEARNERS_API_KEY) return jsonResponse(request, { error: "Dictionary service is not configured." }, 503);
 
     const cache = caches.default;
-    const cacheKey = new Request(`${url.origin}/cache/v2/${encodeURIComponent(word)}`);
+    const cacheKey = new Request(`${url.origin}/cache/v3/${encodeURIComponent(word)}`);
     const cached = await cache.match(cacheKey);
-    if (cached) {
-      return new Response(cached.body, {
-        status: 200,
-        headers: {
-          ...Object.fromEntries(cached.headers),
-          ...corsHeaders(request),
-          "Cache-Control": "no-store",
-        },
-      });
-    }
+    if (cached) return jsonResponse(request, await cached.json());
 
     const endpoint = `https://www.dictionaryapi.com/api/v3/references/learners/json/${encodeURIComponent(word)}?key=${encodeURIComponent(env.MW_LEARNERS_API_KEY)}`;
     try {
