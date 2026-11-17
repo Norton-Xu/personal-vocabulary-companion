@@ -18,7 +18,15 @@
   function loadState() {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if (Array.isArray(saved?.words)) return { words: saved.words, draft: null };
+      if (Array.isArray(saved?.words)) {
+        return {
+          words: saved.words.map((word) => ({
+            ...word,
+            cue: word.cue || createCloze(word.word, word.example),
+          })),
+          draft: null,
+        };
+      }
     } catch {
       // A first visit should feel like a real vocabulary app, not an empty database.
     }
@@ -65,7 +73,7 @@
       <article class="review-card">
         <div class="card-face">
           <div class="card-front">
-            <p class="card-prompt">${escapeHtml(word.cue || word.definition)}</p>
+            <p class="card-prompt">${escapeHtml(reviewPrompt(word))}</p>
           </div>
           <div class="card-back" hidden>
             <h2 class="word">${escapeHtml(word.word)}</h2>
@@ -114,8 +122,7 @@
       <p class="word-meta">${escapeHtml([draft.partOfSpeech, draft.phonetic].filter(Boolean).join(" · "))}</p>
       <p class="definition">${escapeHtml(draft.definition)}</p>
       ${draft.example ? `<p class="example">${escapeHtml(draft.example)}</p>` : ""}
-      <label class="field-label" for="cue-input">Your cue</label>
-      <input class="word-input" id="cue-input" autocomplete="off" placeholder="e.g. 暂定的；a ___ plan" />
+      ${draft.cue ? `<p class="cue-preview">${escapeHtml(draft.cue)}</p>` : ""}
       <div class="result-actions">
         <button class="text-button" id="discard-word" type="button">Discard</button>
         <button class="primary-button" id="save-word" type="button">Save word</button>
@@ -142,7 +149,7 @@
       const response = await fetch(`${API_BASE_URL}/v3/lookup?word=${encodeURIComponent(word)}`);
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "The word could not be found.");
-      state.draft = data;
+      state.draft = { ...data, cue: createCloze(data.word, data.example) };
       renderAdd();
     } catch (error) {
       status.textContent = error.message || "Could not look up this word.";
@@ -157,7 +164,7 @@
     if (!duplicate) {
       state.words.unshift({
         ...state.draft,
-        cue: document.querySelector("#cue-input")?.value.trim() || "",
+        cue: state.draft.cue || "",
         id: crypto.randomUUID(),
         createdAt: Date.now(),
         nextReviewAt: Date.now(),
@@ -182,6 +189,18 @@
     }
     saveState();
     renderReview();
+  }
+
+  function reviewPrompt(word) {
+    if (!word.cue) return word.definition;
+    return word.reviewLevel % 2 === 0 ? word.cue : word.definition;
+  }
+
+  function createCloze(word, example) {
+    if (!word || !example) return "";
+    const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const wordPattern = new RegExp(`\\b${escapedWord}\\b`, "i");
+    return wordPattern.test(example) ? example.replace(wordPattern, "___") : "";
   }
 
   function renderLibrary() {
