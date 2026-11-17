@@ -27,4 +27,4 @@ Before publishing, edit `worker.js` if the final GitHub Pages origin is differen
 
 ## Review schedule
 
-`Remembered` schedules the word after 1, 3, 7, 14, 30, 60, then 120 days. `Again` returns it tomorrow.
+`Remembered` schedules the word after 3, 7, 14, 30, 60, then 120 days. `Again` returns it tomorrow.

@@ -12,6 +12,7 @@
   document.querySelector("#library-button").addEventListener("click", () => toggleView("library"));
   document.querySelector("#add-button").addEventListener("click", () => toggleView("add"));
 
+  document.body.classList.add("is-reviewing");
   render();
 
   function loadState() {
@@ -30,6 +31,7 @@
 
   function showView(viewName) {
     Object.entries(views).forEach(([name, element]) => element.classList.toggle("active", name === viewName));
+    document.body.classList.toggle("is-reviewing", viewName === "review");
     document.querySelector("#add-button").classList.toggle("active", viewName === "add");
     document.querySelector("#library-button").classList.toggle("active", viewName === "library");
     if (viewName === "add") window.setTimeout(() => document.querySelector("#word-input")?.focus(), 50);

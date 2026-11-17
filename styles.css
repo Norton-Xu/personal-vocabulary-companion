@@ -17,6 +17,8 @@ body {
     #101113;
 }
 
+body.is-reviewing { overflow: hidden; }
+
 button, input { font: inherit; }
 button { -webkit-tap-highlight-color: transparent; }
 
@@ -68,6 +70,36 @@ h2 { margin-bottom: 8px; font-size: 25px; line-height: 1.2; letter-spacing: 0; }
 
 .view { display: none; }
 .view.active { display: block; }
+
+body.is-reviewing .app-shell {
+  display: flex;
+  height: 100vh;
+  height: 100dvh;
+  flex-direction: column;
+  overflow: hidden;
+}
+body.is-reviewing .view.active {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+}
+body.is-reviewing .review-card {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+body.is-reviewing .card-face {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+body.is-reviewing .card-front,
+body.is-reviewing .card-back {
+  min-height: 0;
+  flex: 1;
+}
 
 .review-card, .lookup-result, .library-row, .empty-state {
   border: 1px solid rgba(255,255,255,.07);
