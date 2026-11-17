@@ -22,7 +22,9 @@
         return {
           words: saved.words.map((word) => ({
             ...word,
-            cue: word.cue || createCloze(word.word, word.example),
+            cue: word.id === "seed-tentative"
+              ? createCloze(word.word, word.example)
+              : word.cue || createCloze(word.word, word.example),
           })),
           draft: null,
         };
@@ -73,7 +75,10 @@
       <article class="review-card">
         <div class="card-face">
           <div class="card-front">
-            <p class="card-prompt">${escapeHtml(reviewPrompt(word))}</p>
+            <div class="prompt-stack">
+              <p class="prompt-definition">${escapeHtml(word.definition)}</p>
+              ${word.cue ? `<p class="cloze-prompt">${escapeHtml(word.cue)}</p>` : ""}
+            </div>
           </div>
           <div class="card-back" hidden>
             <h2 class="word">${escapeHtml(word.word)}</h2>
@@ -191,11 +196,6 @@
     renderReview();
   }
 
-  function reviewPrompt(word) {
-    if (!word.cue) return word.definition;
-    return word.reviewLevel % 2 === 0 ? word.cue : word.definition;
-  }
-
   function createCloze(word, example) {
     if (!word || !example) return "";
     const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -252,7 +252,7 @@
       phonetic: "/ˈten.tə.t̬ɪv/",
       definition: "not fully decided or certain",
       example: "We have a tentative plan for the first release.",
-      cue: "暂定的；\na ___ plan",
+      cue: "We have a ___ plan for the first release.",
       createdAt: Date.now(),
       nextReviewAt: Date.now(),
       reviewLevel: 0,
