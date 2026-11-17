@@ -35,6 +35,10 @@ function cleanText(value = "") {
 function findExample(value) {
   if (!value || typeof value !== "object") return "";
   if (Array.isArray(value)) {
+    if (value[0] === "vis" && Array.isArray(value[1])) {
+      const illustration = value[1].find((item) => typeof item?.t === "string");
+      if (illustration) return cleanText(illustration.t);
+    }
     for (const item of value) {
       const example = findExample(item);
       if (example) return example;
@@ -74,7 +78,7 @@ export default {
     if (!env.MW_LEARNERS_API_KEY) return jsonResponse(request, { error: "Dictionary service is not configured." }, 503);
 
     const cache = caches.default;
-    const cacheKey = new Request(`${url.origin}/cache/${encodeURIComponent(word)}`);
+    const cacheKey = new Request(`${url.origin}/cache/v2/${encodeURIComponent(word)}`);
     const cached = await cache.match(cacheKey);
     if (cached) return new Response(cached.body, { status: 200, headers: { ...Object.fromEntries(cached.headers), ...corsHeaders(request) } });
 
