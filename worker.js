@@ -53,6 +53,19 @@ function findExample(value) {
   return "";
 }
 
+function normalizeForm(value) {
+  return String(value || "").replace(/\*/g, "").replace(/\s+/g, " ").trim();
+}
+
+function collectForms(entry) {
+  const forms = new Set([
+    entry.meta?.id?.split(":")[0],
+    ...(entry.meta?.stems || []),
+    ...(entry.ins || []).map((item) => item.if),
+  ].map(normalizeForm).filter(Boolean));
+  return [...forms];
+}
+
 function normalizeEntry(entry) {
   const phonetic = entry.hwi?.prs?.find((item) => item.ipa)?.ipa || "";
   const definition = cleanText(entry.shortdef?.[0] || entry.meta?.["app-shortdef"]?.def?.[0] || "");
@@ -63,6 +76,7 @@ function normalizeEntry(entry) {
     phonetic: phonetic ? `/${phonetic}/` : "",
     definition,
     example: findExample(entry.def),
+    forms: collectForms(entry),
     source: "Merriam-Webster Learner's Dictionary",
   };
 }
@@ -71,7 +85,7 @@ export default {
   async fetch(request, env, ctx) {
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(request) });
     const url = new URL(request.url);
-    if (request.method !== "GET" || !["/lookup", "/v3/lookup"].includes(url.pathname)) {
+    if (request.method !== "GET" || !["/lookup", "/v3/lookup", "/v4/lookup"].includes(url.pathname)) {
       return jsonResponse(request, { error: "Not found" }, 404);
     }
 
@@ -80,7 +94,7 @@ export default {
     if (!env.MW_LEARNERS_API_KEY) return jsonResponse(request, { error: "Dictionary service is not configured." }, 503);
 
     const cache = caches.default;
-    const cacheKey = new Request(`${url.origin}/cache/v3/${encodeURIComponent(word)}`);
+    const cacheKey = new Request(`${url.origin}/cache/v4/${encodeURIComponent(word)}`);
     const cached = await cache.match(cacheKey);
     if (cached) return jsonResponse(request, await cached.json());
 

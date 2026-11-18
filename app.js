@@ -127,7 +127,6 @@
       <p class="word-meta">${escapeHtml([draft.partOfSpeech, draft.phonetic].filter(Boolean).join(" · "))}</p>
       <p class="definition">${escapeHtml(draft.definition)}</p>
       ${draft.example ? `<p class="example">${escapeHtml(draft.example)}</p>` : ""}
-      ${draft.cue ? `<p class="cue-preview">${escapeHtml(draft.cue)}</p>` : ""}
       <div class="result-actions">
         <button class="text-button" id="discard-word" type="button">Discard</button>
         <button class="primary-button" id="save-word" type="button">Save word</button>
@@ -151,10 +150,10 @@
     status.textContent = "Looking up word...";
     status.className = "status";
     try {
-      const response = await fetch(`${API_BASE_URL}/v3/lookup?word=${encodeURIComponent(word)}`);
+      const response = await fetch(`${API_BASE_URL}/v4/lookup?word=${encodeURIComponent(word)}`);
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "The word could not be found.");
-      state.draft = { ...data, cue: createCloze(data.word, data.example) };
+      state.draft = { ...data, cue: createCloze(data.word, data.example, data.forms) };
       renderAdd();
     } catch (error) {
       status.textContent = error.message || "Could not look up this word.";
@@ -196,10 +195,15 @@
     renderReview();
   }
 
-  function createCloze(word, example) {
+  function createCloze(word, example, forms = []) {
     if (!word || !example) return "";
-    const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const wordPattern = new RegExp(`\\b${escapedWord}\\b`, "i");
+    const candidates = [...new Set([word, ...forms]
+      .map((form) => String(form || "").replace(/\*/g, "").trim())
+      .filter((form) => /^[a-z][a-z' -]*$/i.test(form)))]
+      .sort((first, second) => second.length - first.length);
+    if (!candidates.length) return "";
+    const alternatives = candidates.map((form) => form.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+    const wordPattern = new RegExp(`\\b(?:${alternatives})\\b`, "i");
     return wordPattern.test(example) ? example.replace(wordPattern, "___") : "";
   }
 
