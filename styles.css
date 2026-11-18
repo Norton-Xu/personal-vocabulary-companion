@@ -18,6 +18,7 @@ body {
 }
 
 body.is-reviewing { overflow: hidden; }
+body.is-library { overflow: hidden; }
 
 button, input { font: inherit; }
 button { -webkit-tap-highlight-color: transparent; }
@@ -81,10 +82,23 @@ body.is-reviewing .app-shell {
   flex-direction: column;
   overflow: hidden;
 }
+body.is-library .app-shell {
+  display: flex;
+  height: 100vh;
+  height: 100dvh;
+  flex-direction: column;
+  overflow: hidden;
+}
 body.is-reviewing .view.active {
   display: flex;
   min-height: 0;
   flex: 1;
+}
+body.is-library .view.active {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
 }
 body.is-reviewing .review-card {
   display: flex;
@@ -186,7 +200,18 @@ body.is-reviewing .card-back {
 
 .review-count { margin: 0 0 14px; color: #a5a6aa; font-size: 14px; }
 .empty-state { padding: 28px 24px; }
-.empty-state p:last-child { margin-bottom: 0; color: #b1afb0; }
+.empty-state > p:not(.eyebrow) { margin-bottom: 0; color: #b1afb0; }
+.extra-review-button {
+  min-height: 44px;
+  margin-top: 24px;
+  padding: 0 16px;
+  border: 1px solid rgba(255,255,255,.13);
+  border-radius: 12px;
+  background: rgba(255,255,255,.055);
+  color: #f0efed;
+  font-weight: 650;
+}
+.extra-review-button:active { transform: scale(.985); background: rgba(255,255,255,.1); }
 
 .add-form { display: grid; gap: 14px; }
 .field-label { color: #d0cfcd; font-size: 15px; font-weight: 650; }
@@ -228,6 +253,15 @@ body.is-reviewing .card-back {
 .library-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
 .library-heading p { margin: 0; color: #999b9f; font-size: 14px; }
 .library-list { display: grid; gap: 9px; }
+body.is-library .library-list {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  padding: 0 1px 2px;
+}
 .library-item {
   position: relative;
   overflow: hidden;

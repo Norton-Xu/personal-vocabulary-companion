@@ -2,7 +2,7 @@
   const STORAGE_KEY = "va-words-v1";
   const API_BASE_URL = window.VA_WORDS_CONFIG?.apiBaseUrl?.replace(/\/$/, "") || "";
   const reviewIntervals = { again: 1, remembered: [1, 3, 7, 14, 30, 60, 120] };
-  const state = loadState();
+  const state = { ...loadState(), extraReviewIds: [] };
   const views = {
     review: document.querySelector("#review-view"),
     add: document.querySelector("#add-view"),
@@ -42,6 +42,7 @@
   function showView(viewName) {
     Object.entries(views).forEach(([name, element]) => element.classList.toggle("active", name === viewName));
     document.body.classList.toggle("is-reviewing", viewName === "review");
+    document.body.classList.toggle("is-library", viewName === "library");
     document.querySelector("#add-button").classList.toggle("active", viewName === "add");
     document.querySelector("#library-button").classList.toggle("active", viewName === "library");
     if (viewName === "add") window.setTimeout(() => document.querySelector("#word-input")?.focus(), 50);
@@ -64,10 +65,16 @@
     return state.words.filter((word) => word.nextReviewAt <= now).sort((a, b) => a.nextReviewAt - b.nextReviewAt);
   }
 
+  function reviewWords() {
+    const scheduled = dueWords();
+    if (scheduled.length) return scheduled;
+    return state.extraReviewIds.map((id) => state.words.find((word) => word.id === id)).filter(Boolean);
+  }
+
   function renderReview() {
-    const due = dueWords();
+    const due = reviewWords();
     if (!due.length) {
-      views.review.innerHTML = document.querySelector("#empty-review-template").innerHTML;
+      renderEmptyReview();
       return;
     }
     const word = due[0];
@@ -102,6 +109,26 @@
     });
     document.querySelectorAll("[data-rating]").forEach((button) => {
       button.addEventListener("click", () => rateWord(word.id, button.dataset.rating));
+    });
+  }
+
+  function renderEmptyReview() {
+    const extraWords = state.words
+      .filter((word) => word.nextReviewAt > Date.now())
+      .sort((first, second) => first.nextReviewAt - second.nextReviewAt)
+      .slice(0, 10);
+    const count = extraWords.length;
+    views.review.innerHTML = `
+      <div class="empty-state">
+        <p class="eyebrow">All clear</p>
+        <h2>Nothing due today.</h2>
+        <p>New words will come back here when it is time to see them again.</p>
+        ${count ? `<button class="extra-review-button" id="extra-review-button" type="button">Review ${count} more</button>` : ""}
+      </div>`;
+
+    views.review.querySelector("#extra-review-button")?.addEventListener("click", () => {
+      state.extraReviewIds = extraWords.map((word) => word.id);
+      renderReview();
     });
   }
 
@@ -183,6 +210,13 @@
   function rateWord(id, rating) {
     const word = state.words.find((item) => item.id === id);
     if (!word) return;
+    const extraIndex = state.extraReviewIds.indexOf(id);
+    if (extraIndex !== -1) {
+      state.extraReviewIds.splice(extraIndex, 1);
+      if (rating === "again") state.extraReviewIds.push(id);
+      renderReview();
+      return;
+    }
     if (rating === "again") {
       word.reviewLevel = 0;
       word.nextReviewAt = Date.now() + reviewIntervals.again * 24 * 60 * 60 * 1000;
