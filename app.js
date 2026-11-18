@@ -75,6 +75,7 @@
     const due = reviewWords();
     if (!due.length) {
       renderEmptyReview();
+      refreshIcons();
       return;
     }
     const word = due[0];
@@ -110,6 +111,7 @@
     document.querySelectorAll("[data-rating]").forEach((button) => {
       button.addEventListener("click", () => rateWord(word.id, button.dataset.rating));
     });
+    refreshIcons();
   }
 
   function renderEmptyReview() {
@@ -231,7 +233,7 @@
 
   function createCloze(word, example, forms = []) {
     if (!word || !example) return "";
-    const candidates = [...new Set([word, ...forms]
+    const candidates = [...new Set([word, ...forms, ...commonForms(word)]
       .map((form) => String(form || "").replace(/\*/g, "").trim())
       .filter((form) => /^[a-z][a-z' -]*$/i.test(form)))]
       .sort((first, second) => second.length - first.length);
@@ -239,6 +241,22 @@
     const alternatives = candidates.map((form) => form.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
     const wordPattern = new RegExp(`\\b(?:${alternatives})\\b`, "i");
     return wordPattern.test(example) ? example.replace(wordPattern, "___") : "";
+  }
+
+  function commonForms(word) {
+    const base = String(word || "").trim().toLowerCase();
+    if (!/^[a-z]+$/.test(base)) return [];
+    const forms = [base];
+    if (/[^aeiou]y$/.test(base)) {
+      forms.push(`${base.slice(0, -1)}ies`, `${base.slice(0, -1)}ied`);
+    } else if (/(s|x|z|ch|sh)$/.test(base)) {
+      forms.push(`${base}es`, `${base}ed`, `${base}ing`);
+    } else if (base.endsWith("e")) {
+      forms.push(`${base}s`, `${base}d`, `${base.slice(0, -1)}ing`);
+    } else {
+      forms.push(`${base}s`, `${base}ed`, `${base}ing`);
+    }
+    return forms;
   }
 
   function renderLibrary() {
