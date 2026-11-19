@@ -24,7 +24,7 @@
             ...word,
             cue: word.id === "seed-tentative"
               ? createCloze(word.word, word.example)
-              : word.cue || createCloze(word.word, word.example),
+              : createCloze(word.word, word.example, word.forms) || word.cue || "",
           })),
           draft: null,
         };
@@ -65,20 +65,13 @@
     return state.words.filter((word) => word.nextReviewAt <= now).sort((a, b) => a.nextReviewAt - b.nextReviewAt);
   }
 
-  function reviewWords() {
-    const scheduled = dueWords();
-    if (scheduled.length) return scheduled;
-    return state.extraReviewIds.map((id) => state.words.find((word) => word.id === id)).filter(Boolean);
-  }
-
   function renderReview() {
-    const due = reviewWords();
-    if (!due.length) {
+    const scheduled = dueWords()[0];
+    const word = scheduled || state.words.find((item) => item.id === state.extraReviewIds[0]);
+    if (!word) {
       renderEmptyReview();
-      refreshIcons();
       return;
     }
-    const word = due[0];
     views.review.innerHTML = `
       <article class="review-card">
         <div class="card-face">
@@ -96,10 +89,10 @@
           </div>
         </div>
         <div class="ratings" hidden>
-          <button class="rating-button again" data-rating="again" aria-label="Review again tomorrow"><i data-lucide="rotate-ccw"></i></button>
-          <button class="rating-button remembered" data-rating="remembered" aria-label="Remembered"><i data-lucide="check"></i></button>
+          <button class="rating-button again" data-rating="again" aria-label="${scheduled ? "Review again tomorrow" : "Review again this round"}">${icon("again")}</button>
+          <button class="rating-button remembered" data-rating="remembered" aria-label="Remembered">${icon("remembered")}</button>
         </div>
-        <button class="reveal-button" id="reveal-button" aria-label="Reveal word"><i data-lucide="chevron-down"></i></button>
+        <button class="reveal-button" id="reveal-button" aria-label="Reveal word">${icon("reveal")}</button>
       </article>`;
 
     document.querySelector("#reveal-button").addEventListener("click", () => {
@@ -109,9 +102,8 @@
       document.querySelector("#reveal-button").hidden = true;
     });
     document.querySelectorAll("[data-rating]").forEach((button) => {
-      button.addEventListener("click", () => rateWord(word.id, button.dataset.rating));
+      button.addEventListener("click", () => rateWord(word.id, button.dataset.rating, !scheduled));
     });
-    refreshIcons();
   }
 
   function renderEmptyReview() {
@@ -209,12 +201,12 @@
     showView("review");
   }
 
-  function rateWord(id, rating) {
+  function rateWord(id, rating, isExtra) {
     const word = state.words.find((item) => item.id === id);
     if (!word) return;
     const extraIndex = state.extraReviewIds.indexOf(id);
-    if (extraIndex !== -1) {
-      state.extraReviewIds.splice(extraIndex, 1);
+    if (extraIndex !== -1) state.extraReviewIds.splice(extraIndex, 1);
+    if (isExtra) {
       if (rating === "again") state.extraReviewIds.push(id);
       renderReview();
       return;
@@ -266,7 +258,7 @@
       <div class="library-list">${words.length ? words.map((word) => `
         <div class="library-item" data-word-id="${escapeHtml(word.id)}">
           <div class="library-delete-action">
-            <button class="library-delete-button" type="button" aria-label="Delete ${escapeHtml(word.word)}"><i data-lucide="trash-2"></i></button>
+            <button class="library-delete-button" type="button" aria-label="Delete ${escapeHtml(word.word)}">${icon("trash")}</button>
           </div>
           <article class="library-row"><h2>${escapeHtml(word.word)}</h2><p>${escapeHtml(word.definition)}</p></article>
         </div>`).join("") : "<div class=\"empty-state\"><h2>Your word list is empty.</h2><p>Add a word when one feels worth keeping.</p></div>"}</div>`;
@@ -295,6 +287,7 @@
 
     item.querySelector(".library-delete-button").addEventListener("click", () => {
       state.words = state.words.filter((word) => word.id !== item.dataset.wordId);
+      state.extraReviewIds = state.extraReviewIds.filter((id) => id !== item.dataset.wordId);
       saveState();
       render();
     });
@@ -319,14 +312,13 @@
     return String(value).replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
   }
 
-  function refreshIcons() {
-    window.lucide?.createIcons({ attrs: { "stroke-width": 1.8 } });
+  function icon(name) {
+    const paths = {
+      reveal: '<path d="m6 9 6 6 6-6"/>',
+      again: '<path d="M3.5 9a9 9 0 1 1 0 6"/><path d="M3.5 3v6h6"/>',
+      remembered: '<path d="m20 6-11 11-5-5"/>',
+      trash: '<path d="M3 6h18M19 6v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6m3 0V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M10 11v6m4-6v6"/>',
+    };
+    return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]}</svg>`;
   }
-
-  const originalRender = render;
-  render = function renderWithIcons() {
-    originalRender();
-    refreshIcons();
-  };
-  refreshIcons();
 })();
