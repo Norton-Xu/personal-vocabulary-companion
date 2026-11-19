@@ -131,7 +131,7 @@
     views.add.innerHTML = `
       <form class="add-form" id="add-form">
         <label class="field-label" for="word-input">Word</label>
-        <input class="word-input" id="word-input" name="word" autocomplete="off" autocapitalize="none" placeholder="e.g. tentative" required />
+        <input class="word-input" id="word-input" name="word" autocomplete="off" autocapitalize="none" required />
         <button class="primary-button" type="submit">Look up word</button>
         <p class="status" id="lookup-status"></p>
       </form>
